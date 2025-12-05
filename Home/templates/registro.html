@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medirecordatorio - Registro</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styler.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🏥 Medirecordatorio</h1>
+            <p>Registro de Pacientes - Bolivia</p>
+        </div>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST" id="registroForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="nombre_completo">Nombre Completo:</label>
+                <input type="text" id="nombre_completo" name="nombre_completo" placeholder="Ej: Juan Pérez García" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" placeholder="Ej: juan@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="celular">Celular:</label>
+                <div class="phone-group">
+                    <input type="text" class="country-code" value="+591" readonly aria-label="Código de país Bolivia">
+                    <input type="text" id="celular" name="celular" class="phone-number" placeholder="71234567" required maxlength="8">
+                </div>
+                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                    Solo números, sin espacios ni guiones
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="departamento">Departamento:</label>
+                <select id="departamento" name="departamento" required>
+                    <option value="">Seleccione un departamento</option>
+                    <option value="La Paz">La Paz</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Cochabamba">Cochabamba</option>
+                    <option value="Chuquisaca">Chuquisaca</option>
+                    <option value="Potosí">Potosí</option>
+                    <option value="Oruro">Oruro</option>
+                    <option value="Tarija">Tarija</option>
+                    <option value="Beni">Beni</option>
+                    <option value="Pando">Pando</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="ciudad_select">Ciudad/Localidad:</label>
+                <select id="ciudad_select" name="ciudad_localidad" required disabled>
+                    <option value="">Primero seleccione departamento</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="direccion">Dirección:</label>
+                <input type="text" id="direccion" name="direccion" placeholder="Ej: Av. Principal #123" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required minlength="8">
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                📋 Registrarse en Medirecordatorio
+            </button>
+        </form>
+        
+        <div class="login-link">
+            <p>¿Ya tienes cuenta? <a href="/">Iniciar Sesión</a></p>
+        </div>
+    </div>
+
+    <script>
+        const ciudadesPorDepartamento = {
+            'La Paz': ['La Paz', 'El Alto', 'Viacha', 'Caranavi', 'Palca', 'Achacachi'],
+            'Santa Cruz': ['Santa Cruz de la Sierra', 'Montero', 'Warnes', 'La Guardia', 'San Ignacio', 'Cotoca'],
+            'Cochabamba': ['Cochabamba', 'Quillacollo', 'Sacaba', 'Colcapirhua', 'Tiquipaya', 'Vinto'],
+            'Chuquisaca': ['Sucre', 'Yamparáez', 'Yotala', 'Tarabuco', 'Zudáñez'],
+            'Potosí': ['Potosí', 'Villazón', 'Tupiza', 'Uyuni', 'Colcha K'],
+            'Oruro': ['Oruro', 'Challapata', 'Huanuni', 'Caracollo', 'Machacamarca'],
+            'Tarija': ['Tarija', 'Yacuiba', 'Bermejo', 'Villamontes', 'Entre Ríos'],
+            'Beni': ['Trinidad', 'Riberalta', 'Guayaramerín', 'San Borja', 'Santa Ana'],
+            'Pando': ['Cobija', 'Porvenir', 'Bella Flor', 'Filadelfia', 'Santos Mercado']
+        };
+
+        function actualizarCiudades() {
+            const departamento = document.getElementById('departamento').value;
+            const ciudadSelect = document.getElementById('ciudad_select');
+            
+            // Limpiar y resetear el select de ciudades
+            ciudadSelect.innerHTML = '';
+            
+            if (departamento && ciudadesPorDepartamento[departamento]) {
+                // Habilitar el select
+                ciudadSelect.disabled = false;
+                
+                // Agregar opción por defecto
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Seleccione una ciudad';
+                ciudadSelect.appendChild(defaultOption);
+                
+                // Agregar ciudades
+                ciudadesPorDepartamento[departamento].forEach(ciudad => {
+                    const option = document.createElement('option');
+                    option.value = ciudad;
+                    option.textContent = ciudad;
+                    ciudadSelect.appendChild(option);
+                });
+            } else {
+                // Deshabilitar y resetear si no hay departamento seleccionado
+                ciudadSelect.disabled = true;
+                ciudadSelect.innerHTML = '<option value="">Primero seleccione departamento</option>';
+            }
+        }
+
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            const departamentoSelect = document.getElementById('departamento');
+            const celularInput = document.getElementById('celular');
+            const formulario = document.getElementById('registroForm');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Event listener para el departamento
+            if (departamentoSelect) {
+                departamentoSelect.addEventListener('change', actualizarCiudades);
+            }
+
+            // Validación del celular (solo números)
+            if (celularInput) {
+                celularInput.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    
+                    // Validar longitud
+                    if (this.value.length > 8) {
+                        this.value = this.value.slice(0, 8);
+                    }
+                });
+            }
+
+            // Validación del formulario antes de enviar
+            if (formulario) {
+                formulario.addEventListener('submit', function(e) {
+                    const password = document.getElementById('password').value;
+                    const ciudad = document.getElementById('ciudad_select').value;
+                    
+                    // Validar longitud de contraseña
+                    if (password.length < 8) {
+                        e.preventDefault();
+                        alert('La contraseña debe tener al menos 8 caracteres');
+                        return;
+                    }
+                    
+                    // Validar que se haya seleccionado una ciudad
+                    if (!ciudad) {
+                        e.preventDefault();
+                        alert('Por favor seleccione una ciudad');
+                        return;
+                    }
+                    
+                    // Mostrar estado de carga
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Registrando...';
+                });
+            }
+
+            // Mejorar experiencia en móviles
+            if (window.innerWidth <= 768) {
+                // Asegurar que los selects sean fáciles de usar en móvil
+                const selects = document.querySelectorAll('select');
+                selects.forEach(select => {
+                    select.style.fontSize = '16px'; // Previene zoom en iOS
+                });
+            }
+        });
+
+        // Manejar cambios de tamaño de ventana
+        window.addEventListener('resize', function() {
+            // Re-aplicar estilos específicos para móviles si es necesario
+        });
+    </script>
+</body>
+</html>

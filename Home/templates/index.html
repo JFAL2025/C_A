@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medirecordatorio - Inicio</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🏥 Medirecordatorio</h1>
+            <p>Sistema de Gestión Médica</p>
+        </div>
+
+        <div id="login-tab" class="tab-content active">
+            {% if login_error %}
+                <div class="error">{{ login_error }}</div>
+            {% endif %}
+            {% if login_success %}
+                <div class="success">{{ login_success }}</div>
+            {% endif %}
+
+            <h2>Iniciar Sesión</h2>
+            <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="login">
+                
+                <div class="form-group">
+                    <label>Correo Electrónico:</label>
+                    <input type="email" name="email" placeholder="Ej: juan@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Contraseña:</label>
+                    <input type="password" name="password" placeholder="Ingresa tu contraseña" required>
+                </div>
+                
+                <button type="submit" class="btn">🔐 Iniciar Sesión</button>
+            </form>
+
+            <div class="register-link">
+                <p>¿No tienes una cuenta? <a href="{% url 'registro' %}">Regístrate aquí</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

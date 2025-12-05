@@ -1,0 +1,11 @@
+[33m198ba7b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Descripción de tus cambios
+[33mef03828[m Descripción de tus cambios
+[33m81842e9[m Agregar elemento oculto con usuario_id para Android
+[33ma078a4f[m Fix: api_medicamentos simplificada para debug
+[33mdcccfe6[m Fix: agregar URL api/mi-id faltante
+[33mbb9f0d5[m Agregar APIs para app Android
+[33m3fb6ef4[m feat: mejorar templates y vistas de autenticación
+[33m72f1123[m Descripción de los cambios realizados
+[33mcdd3f25[m Initial commit: Medirecordatorio app
+[33m13bd4b4[m Actualizar dependencias y aplicar migraciones
+[33mad3e9bd[m feat: initial commit of my app

@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medirecordatorio - Panel de Medicamentos</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'stylep.css' %}">
+</head>
+<body>
+    <div id="usuario-id" class="hidden">{{ request.session.usuario_id }}</div>
+
+    <div class="container">
+        <div class="logo">
+            <h1>💊 Medirecordatorio</h1>
+            <p>Gestión de tratamientos médicos</p>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-details">
+                <span>👤</span>
+                <div>
+                    <strong>Usuario:</strong> {{ usuario_nombre }}
+                </div>
+            </div>
+            <div class="reloj">
+                <div class="reloj-content">
+                    <strong>🕒 Hora actual:</strong>
+                    <span id="reloj-tiempo-real">--:--:--</span>
+                </div>
+                <div class="reloj-content">
+                    <strong>📅 Fecha:</strong>
+                    <span id="fecha-actual">--/--/----</span>
+                </div>
+            </div>
+            
+            <!-- CRONÓMETRO INTELIGENTE DE MEDICAMENTOS -->
+            <div class="cronometro-medicamento" id="cronometro-container">
+                <div class="proximo-medicamento" id="proximo-medicamento">
+                    <strong>⏰ Próximo medicamento:</strong>
+                    <span id="medicamento-pendiente">Calculando...</span>
+                </div>
+                <div class="tiempo-restante" id="tiempo-restante">
+                    <strong>⏳ Tiempo restante:</strong>
+                    <span id="contador-tiempo">--:--:--</span>
+                </div>
+            </div>
+            
+            <form method="POST" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-logout">🚪 Cerrar Sesión</button>
+            </form>
+        </div>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+            <div class="success">{{ success }}</div>
+        {% endif %}
+
+        <h2>➕ Agregar Nuevo Medicamento</h2>
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Nombre del Medicamento:</label>
+                <input type="text" name="nombre_medicamento" placeholder="Ej: Paracetamol 500mg" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Dosis:</label>
+                    <input type="text" name="dosis" placeholder="Ej: 1 tableta" required>
+                </div>
+                <div class="form-group">
+                    <label>Frecuencia:</label>
+                    <select name="frecuencia" required>
+                        <option value="">Seleccione frecuencia</option>
+                        <option value="diario">Diario</option>
+                        <option value="cada_12_horas">Cada 12 horas</option>
+                        <option value="cada_8_horas">Cada 8 horas</option>
+                        <option value="cada_6_horas">Cada 6 horas</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensual">Mensual</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Horario:</label>
+                    <select name="horario" id="horario-select" required>
+                        <option value="">Seleccione horario</option>
+                        <option value="manana">Mañana</option>
+                        <option value="tarde">Tarde</option>
+                        <option value="noche">Noche</option>
+                        <option value="personalizado">Personalizado</option>
+                    </select>
+                </div>
+                <div class="form-group" id="hora-personalizada-group">
+                    <label>Hora Personalizada:</label>
+                    <input type="time" name="hora_personalizada" id="hora-personalizada-input">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha de Inicio:</label>
+                    <input type="date" name="fecha_inicio" id="fecha-inicio-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Fecha Final:</label>
+                    <input type="date" name="fecha_fin" id="fecha-fin-input">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Instrucciones y Especificaciones:</label>
+                <textarea name="instrucciones" rows="4" placeholder="Ej: Tomar después del desayuno. No mezclar con alcohol." required></textarea>
+            </div>
+
+            <button type="submit" class="btn">💾 Guardar Medicamento</button>
+        </form>
+
+        <div class="medicamentos-list">
+            <h2>📋 Medicamentos de {{ usuario_nombre }}</h2>
+            {% if medicamentos %}
+                {% for med in medicamentos %}
+                <div class="medicamento-item" data-medicamento='{"id": {{ med.id }}, "nombre": "{{ med.nombre_medicamento }}", "hora": "{{ med.hora_personalizada|default:"" }}", "frecuencia": "{{ med.frecuencia }}", "dosis": "{{ med.dosis }}", "fecha_inicio": "{{ med.fecha_inicio }}", "fecha_fin": "{{ med.fecha_fin|default:"" }}"}'>
+                    <h3>💊 {{ med.nombre_medicamento }}</h3>
+                    <p><strong>Dosis:</strong> {{ med.dosis }} | <strong>Frecuencia:</strong> {{ med.frecuencia }}</p>
+                    <p><strong>Horario:</strong> {{ med.horario }} {% if med.hora_personalizada %}({{ med.hora_personalizada }}){% endif %}</p>
+                    <p><strong>Período:</strong> {{ med.fecha_inicio }} {% if med.fecha_fin %}a {{ med.fecha_fin }}{% endif %}</p>
+                    <p><strong>Instrucciones:</strong> {{ med.instrucciones }}</p>
+                    <p><small>Registrado el: {{ med.creado_en }}</small></p>
+                    <button class="btn-tomar" onclick="marcarComoTomado({{ med.id }})">✅ Marcar como tomado</button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay medicamentos registrados para {{ usuario_nombre }}.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal para la alarma -->
+    <div id="alarma-modal" class="modal-alarma">
+        <div class="modal-contenido">
+            <div class="alarma-header">
+                <span class="alarma-icono">⏰</span>
+                <h3>¡Hora de tomar tu medicamento!</h3>
+            </div>
+            <div class="alarma-body">
+                <p id="alarma-medicamento-info"></p>
+                <div class="timer-alarma">
+                    <strong>⏰ La alarma se apagará en: </strong>
+                    <span id="tiempo-restante-alarma">10:00</span>
+                </div>
+                <div class="alarma-acciones">
+                    <button id="btn-tomado-ahora" class="btn-alarma btn-tomado">✅ Ya lo tomé</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio para la alarma (oculto) -->
+    <audio id="alarma-sonido" loop preload="auto">
+        <source src="{% static 'sounds/alarma.mp3' %}" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Datos de medicamentos desde Django
+        const medicamentos = [
+            {% for med in medicamentos %}
+            {
+                id: {{ med.id }},
+                nombre: "{{ med.nombre_medicamento|escapejs }}",
+                hora: "{{ med.hora_personalizada|default:'' }}",
+                frecuencia: "{{ med.frecuencia|escapejs }}",
+                dosis: "{{ med.dosis|escapejs }}",
+                fecha_inicio: "{{ med.fecha_inicio|date:'Y-m-d' }}",
+                fecha_fin: "{{ med.fecha_fin|date:'Y-m-d'|default:'' }}",
+                activo: true
+            },
+            {% endfor %}
+        ];
+
+        // Variables globales para la alarma
+        let alarmaActiva = false;
+        let medicamentoAlarma = null;
+        let tiempoInicioAlarma = null;
+        let intervaloAlarma = null;
+        let intervaloTiempoAlarma = null;
+
+        // Función para actualizar el reloj y la fecha
+        function actualizarReloj() {
+            const ahora = new Date();
+            
+            // Formatear hora
+            const horas = ahora.getHours().toString().padStart(2, '0');
+            const minutos = ahora.getMinutes().toString().padStart(2, '0');
+            const segundos = ahora.getSeconds().toString().padStart(2, '0');
+            
+            // Formatear fecha
+            const dia = ahora.getDate().toString().padStart(2, '0');
+            const mes = (ahora.getMonth() + 1).toString().padStart(2, '0');
+            const año = ahora.getFullYear();
+            
+            const reloj = document.getElementById('reloj-tiempo-real');
+            const fecha = document.getElementById('fecha-actual');
+            
+            if (reloj) {
+                reloj.textContent = `${horas}:${minutos}:${segundos}`;
+            }
+            if (fecha) {
+                fecha.textContent = `${dia}/${mes}/${año}`;
+            }
+
+            // Actualizar cronómetro de medicamentos
+            actualizarCronometroMedicamentos(ahora);
+        }
+
+        // Función para verificar si el medicamento está activo
+        function esMedicamentoActivo(med, ahora) {
+            const fechaInicio = new Date(med.fecha_inicio);
+            const fechaFin = med.fecha_fin ? new Date(med.fecha_fin) : null;
+            
+            // Verificar si está dentro del rango de fechas
+            if (ahora < fechaInicio) return false;
+            if (fechaFin && ahora > new Date(fechaFin.getTime() + 24 * 60 * 60 * 1000)) return false;
+            
+            return true;
+        }
+
+        // Función para calcular el próximo medicamento
+        function calcularProximoMedicamento() {
+            const ahora = new Date();
+            
+            let medicamentoMasCercano = null;
+            let menorDiferencia = Infinity;
+
+            medicamentos.forEach(med => {
+                if (!esMedicamentoActivo(med, ahora)) return;
+
+                if (med.hora) {
+                    const [horas, minutos] = med.hora.split(':').map(Number);
+                    const horaMedicamento = new Date();
+                    horaMedicamento.setHours(horas, minutos, 0, 0);
+
+                    let diferencia = horaMedicamento - ahora;
+                    
+                    if (diferencia < 0) {
+                        // Calcular próxima dosis según frecuencia
+                        switch(med.frecuencia) {
+                            case 'cada_6_horas':
+                                diferencia += 6 * 60 * 60 * 1000;
+                                break;
+                            case 'cada_8_horas':
+                                diferencia += 8 * 60 * 60 * 1000;
+                                break;
+                            case 'cada_12_horas':
+                                diferencia += 12 * 60 * 60 * 1000;
+                                break;
+                            case 'diario':
+                                diferencia += 24 * 60 * 60 * 1000;
+                                break;
+                            case 'semanal':
+                                diferencia += 7 * 60 * 60 * 1000 * 24;
+                                break;
+                            case 'mensual':
+                                diferencia += 30 * 60 * 60 * 1000 * 24;
+                                break;
+                            default:
+                                diferencia += 24 * 60 * 60 * 1000;
+                        }
+                    }
+
+                    if (diferencia < menorDiferencia && diferencia > 0) {
+                        menorDiferencia = diferencia;
+                        medicamentoMasCercano = med;
+                    }
+                }
+            });
+
+            return { medicamento: medicamentoMasCercano, diferencia: menorDiferencia };
+        }
+
+        // Función para actualizar el cronómetro
+        function actualizarCronometroMedicamentos(ahora) {
+            const resultado = calcularProximoMedicamento();
+            
+            if (resultado.medicamento && resultado.diferencia !== Infinity) {
+                const tiempoRestante = resultado.diferencia;
+                const horas = Math.floor(tiempoRestante / (1000 * 60 * 60));
+                const minutos = Math.floor((tiempoRestante % (1000 * 60 * 60)) / (1000 * 60));
+                const segundos = Math.floor((tiempoRestante % (1000 * 60)) / 1000);
+
+                document.getElementById('medicamento-pendiente').textContent = 
+                    `${resultado.medicamento.nombre} - ${resultado.medicamento.dosis}`;
+                document.getElementById('contador-tiempo').textContent = 
+                    `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+
+                // Cambiar color según urgencia
+                const contador = document.getElementById('contador-tiempo');
+                const cronometroContainer = document.getElementById('cronometro-container');
+                
+                if (horas === 0 && minutos < 30) {
+                    contador.style.color = '#e74c3c';
+                    cronometroContainer.style.background = '#e74c3c';
+                    
+                    // Activar alarma cuando llegue a 0:0:0
+                    if (horas === 0 && minutos === 0 && segundos === 0 && !alarmaActiva) {
+                        activarAlarma(resultado.medicamento);
+                    }
+                } else if (horas === 0 && minutos < 60) {
+                    contador.style.color = '#f39c12';
+                    cronometroContainer.style.background = '#f39c12';
+                } else {
+                    contador.style.color = 'white';
+                    cronometroContainer.style.background = '#27ae60';
+                }
+            } else {
+                document.getElementById('medicamento-pendiente').textContent = 'No hay medicamentos pendientes';
+                document.getElementById('contador-tiempo').textContent = '--:--:--';
+                document.getElementById('cronometro-container').style.background = '#95a5a6';
+            }
+        }
+
+        // Función para activar la alarma
+        function activarAlarma(medicamento) {
+            if (alarmaActiva) return;
+            
+            console.log('🔔 Activando alarma para:', medicamento.nombre);
+            alarmaActiva = true;
+            medicamentoAlarma = medicamento;
+            tiempoInicioAlarma = Date.now();
+            
+            // Mostrar modal de alarma
+            const modal = document.getElementById('alarma-modal');
+            const medicamentoInfo = document.getElementById('alarma-medicamento-info');
+            
+            medicamentoInfo.textContent = `Es hora de tomar: ${medicamento.nombre} - ${medicamento.dosis}`;
+            modal.style.display = 'block';
+            
+            // Iniciar timer de 10 minutos en la alarma
+            iniciarTimerAlarma();
+            
+            // Reproducir sonido de alarma MP3
+            const alarmaSonido = document.getElementById('alarma-sonido');
+            try {
+                alarmaSonido.play().catch(e => {
+                    console.log('Error reproduciendo MP3:', e);
+                    crearSonidoAlarma();
+                });
+            } catch (e) {
+                console.log('Error con el audio:', e);
+                crearSonidoAlarma();
+            }
+            
+            // Hacer parpadear el cronómetro
+            document.getElementById('cronometro-container').classList.add('alarma-activa');
+            
+            // Mostrar notificación toast
+            mostrarToastAlarma(medicamento);
+            
+            // Iniciar verificación de los 10 minutos
+            iniciarVerificacionTiempoAlarma();
+        }
+
+        // Timer para mostrar tiempo restante de alarma
+        function iniciarTimerAlarma() {
+            let tiempoRestante = 10 * 60; // 10 minutos en segundos
+            const elemento = document.getElementById('tiempo-restante-alarma');
+            
+            if (intervaloAlarma) {
+                clearInterval(intervaloAlarma);
+            }
+            
+            intervaloAlarma = setInterval(() => {
+                if (!alarmaActiva) {
+                    clearInterval(intervaloAlarma);
+                    return;
+                }
+                
+                tiempoRestante--;
+                const minutos = Math.floor(tiempoRestante / 60);
+                const segundos = tiempoRestante % 60;
+                
+                if (elemento) {
+                    elemento.textContent = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+                }
+                
+                if (tiempoRestante <= 0) {
+                    clearInterval(intervaloAlarma);
+                }
+            }, 1000);
+        }
+
+        // Verificar si la alarma lleva más de 10 minutos activa
+        function iniciarVerificacionTiempoAlarma() {
+            if (intervaloTiempoAlarma) {
+                clearInterval(intervaloTiempoAlarma);
+            }
+            
+            intervaloTiempoAlarma = setInterval(() => {
+                if (!alarmaActiva) {
+                    clearInterval(intervaloTiempoAlarma);
+                    return;
+                }
+                
+                const tiempoTranscurrido = Date.now() - tiempoInicioAlarma;
+                const minutosTranscurridos = Math.floor(tiempoTranscurrido / (1000 * 60));
+                
+                // Si han pasado 10 minutos, desactivar automáticamente
+                if (minutosTranscurridos >= 10) {
+                    console.log('⏰ Alarma automáticamente desactivada después de 10 minutos');
+                    desactivarAlarma();
+                    clearInterval(intervaloTiempoAlarma);
+                    
+                    // Mostrar mensaje informativo
+                    alert('⏰ La alarma se ha desactivado automáticamente después de 10 minutos. Si aún no has tomado tu medicamento, por favor hazlo ahora.');
+                }
+            }, 1000);
+        }
+
+        // Función para crear sonido de alarma programáticamente (respaldo)
+        function crearSonidoAlarma() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 800;
+                gainNode.gain.value = 0.1;
+                
+                oscillator.start();
+                
+                // Parpadear frecuencia
+                const interval = setInterval(() => {
+                    if (!alarmaActiva) {
+                        clearInterval(interval);
+                        oscillator.stop();
+                        return;
+                    }
+                    oscillator.frequency.value = oscillator.frequency.value === 800 ? 600 : 800;
+                }, 200);
+            } catch (e) {
+                console.log('Error creando sonido programático:', e);
+            }
+        }
+
+        // Función para desactivar la alarma
+        function desactivarAlarma() {
+            if (!alarmaActiva) return;
+            
+            console.log('🔕 Desactivando alarma...');
+            alarmaActiva = false;
+            
+            // Limpiar intervalos
+            if (intervaloAlarma) {
+                clearInterval(intervaloAlarma);
+                intervaloAlarma = null;
+            }
+            if (intervaloTiempoAlarma) {
+                clearInterval(intervaloTiempoAlarma);
+                intervaloTiempoAlarma = null;
+            }
+            
+            // Ocultar modal INMEDIATAMENTE
+            const modal = document.getElementById('alarma-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // Detener sonido MP3 INMEDIATAMENTE
+            const alarmaSonido = document.getElementById('alarma-sonido');
+            if (alarmaSonido) {
+                alarmaSonido.pause();
+                alarmaSonido.currentTime = 0;
+            }
+            
+            // Quitar animación de parpadeo
+            const cronometro = document.getElementById('cronometro-container');
+            if (cronometro) {
+                cronometro.classList.remove('alarma-activa');
+            }
+            
+            // Ocultar toast si existe
+            const toast = document.getElementById('toast-alarma');
+            if (toast) {
+                toast.style.display = 'none';
+            }
+            
+            medicamentoAlarma = null;
+            tiempoInicioAlarma = null;
+            console.log('✅ Alarma desactivada completamente');
+        }
+
+        // Función para mostrar notificación del navegador
+        function mostrarNotificacionNavegador(medicamento) {
+            if (!("Notification" in window)) return;
+            
+            if (Notification.permission === "granted") {
+                new Notification("💊 Hora de medicamento", {
+                    body: `Es hora de tomar: ${medicamento.nombre} - ${medicamento.dosis}`,
+                    tag: "medicamento-alarma"
+                });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("💊 Hora de medicamento", {
+                            body: `Es hora de tomar: ${medicamento.nombre} - ${medicamento.dosis}`
+                        });
+                    }
+                });
+            }
+        }
+
+        // Función para mostrar toast de alarma
+        function mostrarToastAlarma(medicamento) {
+            // Crear toast si no existe
+            let toast = document.getElementById('toast-alarma');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast-alarma';
+                toast.className = 'toast-alarma';
+                toast.innerHTML = `
+                    <strong>💊 Recordatorio</strong>
+                    <p>Es hora de tomar: ${medicamento.nombre}</p>
+                    <small>La alarma sonará por 10 minutos</small>
+                `;
+                document.body.appendChild(toast);
+            }
+            
+            toast.style.display = 'block';
+            
+            // Auto-ocultar después de 10 segundos
+            setTimeout(() => {
+                if (toast) toast.style.display = 'none';
+            }, 10000);
+        }
+
+        // Función para marcar medicamento como tomado
+        function marcarComoTomado(medicamentoId) {
+            if (confirm('¿Marcar este medicamento como tomado?')) {
+                const medicamento = medicamentos.find(m => m.id === medicamentoId);
+                if (medicamento) {
+                    medicamento.activo = false;
+                    
+                    // Si era el medicamento de la alarma, desactivarla INMEDIATAMENTE
+                    if (alarmaActiva && medicamentoAlarma && medicamentoAlarma.id === medicamentoId) {
+                        desactivarAlarma();
+                    }
+                    
+                    alert(`✅ ${medicamento.nombre} marcado como tomado`);
+                    
+                    // Actualizar la interfaz manualmente
+                    actualizarInterfazDespuesDeTomar(medicamentoId);
+                }
+            }
+        }
+
+        // Función para actualizar la interfaz sin recargar
+        function actualizarInterfazDespuesDeTomar(medicamentoId) {
+            // Encontrar el elemento del medicamento
+            const medicamentoElement = document.querySelector(`[data-medicamento*='"id":${medicamentoId}']`);
+            if (medicamentoElement) {
+                // Cambiar el estilo para mostrar que fue tomado
+                medicamentoElement.style.opacity = '0.6';
+                medicamentoElement.style.background = '#e8f5e8';
+                const boton = medicamentoElement.querySelector('.btn-tomar');
+                boton.disabled = true;
+                boton.textContent = '✅ Tomado';
+                boton.style.background = '#95a5a6';
+            }
+            
+            // Actualizar el cronómetro inmediatamente
+            actualizarCronometroMedicamentos(new Date());
+        }
+
+        // Función especial para marcar como tomado desde la alarma
+        function marcarComoTomadoDesdeAlarma(medicamentoId) {
+            const medicamento = medicamentos.find(m => m.id === medicamentoId);
+            if (medicamento) {
+                medicamento.activo = false;
+                actualizarInterfazDespuesDeTomar(medicamentoId);
+            }
+        }
+
+        // Event listeners para los botones de alarma
+        document.addEventListener('DOMContentLoaded', function() {
+            // Botón "Ya lo tomé"
+            document.getElementById('btn-tomado-ahora').addEventListener('click', function() {
+                if (medicamentoAlarma) {
+                    // Desactivar alarma INMEDIATAMENTE
+                    desactivarAlarma();
+                    
+                    // Luego marcar como tomado
+                    setTimeout(() => {
+                        marcarComoTomadoDesdeAlarma(medicamentoAlarma.id);
+                        alert(`✅ ${medicamentoAlarma.nombre} marcado como tomado`);
+                    }, 100);
+                } else {
+                    desactivarAlarma();
+                }
+            });
+            
+            // Cerrar modal haciendo click fuera
+            document.getElementById('alarma-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    desactivarAlarma();
+                }
+            });
+        });
+
+        // Solicitar permisos de notificación al cargar la página
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+
+        // Resto del código existente
+        document.querySelector('.logout-form').addEventListener('submit', function(e) {
+            if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                e.preventDefault();
+            }
+        });
+
+        const horarioSelect = document.getElementById('horario-select');
+        const horaPersonalizadaGroup = document.getElementById('hora-personalizada-group');
+        const horaPersonalizadaInput = document.getElementById('hora-personalizada-input');
+
+        function toggleHoraPersonalizada() {
+            if (horarioSelect.value === 'personalizado') {
+                horaPersonalizadaGroup.style.display = 'block';
+            } else {
+                horaPersonalizadaGroup.style.display = 'none';
+                horaPersonalizadaInput.value = '';
+            }
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleHoraPersonalizada();
+            
+            if (horarioSelect) {
+                horarioSelect.addEventListener('change', toggleHoraPersonalizada);
+            }
+
+            const fechaInicio = document.getElementById('fecha-inicio-input');
+            if (fechaInicio) {
+                // Obtener la fecha actual en el huso horario local
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const todayFormatted = `${year}-${month}-${day}`;
+                
+                // Establecer el valor por defecto como hoy
+                fechaInicio.value = todayFormatted;
+                
+                // NO establecer .min para permitir seleccionar cualquier fecha
+                // Esto soluciona el problema de no poder seleccionar el día de hoy
+            }
+
+            const fechaFin = document.getElementById('fecha-fin-input');
+            if (fechaInicio && fechaFin) {
+                fechaInicio.addEventListener('change', function() {
+                    fechaFin.min = this.value;
+                });
+            }
+        });
+
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (horarioSelect.value !== 'personalizado') {
+                horaPersonalizadaInput.value = '';
+            }
+        });
+
+        // Actualizar el reloj inmediatamente y cada segundo
+        actualizarReloj();
+        setInterval(actualizarReloj, 1000);
+    </script>
+</body>
+</html>
